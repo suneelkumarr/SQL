@@ -43,28 +43,33 @@ INSERT INTO events VALUES
 ```sql
 -- Solution 1: using NOT IN and UNION ALL
 
-SELECT   gold AS player, COUNT(*) AS no_of_gold
-FROM     events
-WHERE    gold NOT IN (SELECT silver FROM events UNION ALL SELECT bronze FROM events)
-GROUP BY 1
-ORDER BY 1
+SELECT gold AS player, COUNT(*) AS no_of_gold
+FROM events
+WHERE gold NOT IN (
+    SELECT silver FROM events 
+    UNION 
+    SELECT bronze FROM events
+)
+GROUP BY gold
+ORDER BY gold;
 
 
 -- Solution 2: using UNION ALL and HAVING conditions.
 
-WITH CTE as (
-    SELECT gold as player_name, 'gold' as medal_type
-    FROM   events
+WITH CTE AS (
+    SELECT gold AS player_name, 'gold' AS medal_type
+    FROM events
     UNION ALL
-    SELECT silver as player_name, 'silver' as medal_type
-    FROM   events
+    SELECT silver AS player_name, 'silver' AS medal_type
+    FROM events
     UNION ALL
-    SELECT bronze as player_name, 'bronze' as medal_type
-    FROM   events
+    SELECT bronze AS player_name, 'bronze' AS medal_type
+    FROM events
 )
-SELECT   player_name, COUNT(*) as no_of_gold
-FROM     CTE
-GROUP BY 1
-HAVING   COUNT(distinct medal_type) = 1 and MAX(medal_type)='gold'
+SELECT player_name, COUNT(*) AS no_of_gold
+FROM CTE
+GROUP BY player_name
+HAVING COUNT(DISTINCT medal_type) = 1
+   AND MIN(medal_type) = 'gold';
 ```
 

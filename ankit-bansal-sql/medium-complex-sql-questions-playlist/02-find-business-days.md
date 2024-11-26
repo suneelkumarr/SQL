@@ -46,32 +46,65 @@ ticket_id |	business_days |
 ```sql
 -- my approach
 
-WITH RECURSIVE date_range AS (
-    SELECT t.ticket_id,
-           t.create_date AS curr_date,
-           t.resolved_date
-    FROM   tickets t
+
+WITH date_range AS (
+    SELECT ticket_id, create_date AS curr_date, resolved_date
+    FROM tickets
+    WHERE create_date <= resolved_date
     UNION ALL
-    SELECT t.ticket_id,
-           (dr.curr_date + INTERVAL '1 DAY')::DATE AS curr_date,
-           dr.resolved_date
-    FROM   date_range dr JOIN tickets t USING(ticket_id)
-    WHERE  dr.curr_date < t.resolved_date
+    SELECT dr.ticket_id, DATEADD(DAY, 1, dr.curr_date) AS curr_date, dr.resolved_date
+    FROM date_range dr
+    WHERE DATEADD(DAY, 1, dr.curr_date) <= dr.resolved_date
 ),
 business_days AS (
     SELECT ticket_id, curr_date
-    FROM   date_range
-    WHERE  EXTRACT(ISODOW FROM curr_date) NOT IN (6, 7)
+    FROM date_range
+    WHERE DATEPART(WEEKDAY, curr_date) NOT IN (1, 7) -- Exclude Sunday (1) and Saturday (7)
 ),
-final_business_days AS (
+valid_business_days AS (
     SELECT bd.ticket_id, bd.curr_date
-    FROM   business_days bd LEFT JOIN holidays h ON bd.curr_date = h.holiday_date
-    WHERE  h.holiday_date IS NULL
+    FROM business_days bd
+    LEFT JOIN holidays h ON bd.curr_date = h.holiday_date
+    WHERE h.holiday_date IS NULL
 )
-SELECT   ticket_id, COUNT(curr_date) AS business_days
-FROM     final_business_days
-GROUP BY 1
-ORDER BY 1
+SELECT ticket_id, COUNT(*) AS business_days
+FROM valid_business_days
+GROUP BY ticket_id
+ORDER BY ticket_id;
+
+
+-- method 2
+WITH numbers AS (
+    SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) - 1 AS n
+    FROM master.dbo.spt_values -- Built-in table with many rows
+),
+date_range AS (
+    SELECT 
+        t.ticket_id,
+        DATEADD(DAY, n, t.create_date) AS curr_date
+    FROM tickets t
+    JOIN numbers n ON n.n <= DATEDIFF(DAY, t.create_date, t.resolved_date)
+),
+business_days AS (
+    SELECT ticket_id, curr_date
+    FROM date_range
+    WHERE DATEPART(WEEKDAY, curr_date) NOT IN (1, 7) -- Exclude Sunday (1) and Saturday (7)
+),
+valid_business_days AS (
+    SELECT bd.ticket_id, bd.curr_date
+    FROM business_days bd
+    LEFT JOIN holidays h ON bd.curr_date = h.holiday_date
+    WHERE h.holiday_date IS NULL
+)
+SELECT ticket_id, COUNT(*) AS business_days
+FROM valid_business_days
+GROUP BY ticket_id
+ORDER BY ticket_id;
+
+
+
+
+
 
 
 -- NOTE: 

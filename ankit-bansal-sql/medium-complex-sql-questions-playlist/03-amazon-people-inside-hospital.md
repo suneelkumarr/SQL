@@ -38,26 +38,28 @@ people_inside |
 ```sql
 -- Solution 1: usnig ROW_NUMBER()  // also my approach: 
 
-WITH cte as (
-	SELECT *, ROW_NUMBER() OVER(PARTITION BY emp_id ORDER BY time desc) as rn
-	FROM   hospital
+WITH cte AS (
+    SELECT *, 
+           ROW_NUMBER() OVER (PARTITION BY emp_id ORDER BY [time] DESC) AS rn
+    FROM hospital
 )
-SELECT COUNT(emp_id) FILTER(WHERE action='in') as people_inside
-FROM   cte
-WHERE  rn=1
+SELECT COUNT(*) AS people_inside
+FROM cte
+WHERE rn = 1 AND action = 'in';
 
 
 -- Solution 2: using intime > outtime logic
 
-WITH CTE as (	
-	SELECT   emp_id, 
-	         MAX(CASE WHEN action='in' THEN time END) AS intime,
-	         MAX(CASE WHEN action='out' THEN time END) AS outtime
-	FROM     hospital
-	GROUP BY 1
+WITH CTE AS (
+    SELECT 
+        emp_id, 
+        MAX(CASE WHEN action = 'in' THEN time END) AS intime,
+        MAX(CASE WHEN action = 'out' THEN time END) AS outtime
+    FROM hospital
+    GROUP BY emp_id
 )
-SELECT COUNT(*) as people_inside
-FROM   CTE
-WHERE  intime > outtime OR outtime IS NULL
+SELECT COUNT(*) AS people_inside
+FROM CTE
+WHERE (intime > outtime OR outtime IS NULL) AND intime IS NOT NULL;
 ```
 
