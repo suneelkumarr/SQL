@@ -53,14 +53,15 @@ FROM   CTE c JOIN emp_salary es USING(dept_id, salary)
 -- Solution 2: using RIGHT JOIN
 
 WITH CTE AS (
-	SELECT   dept_id, salary
-	FROM     emp_salary
-	GROUP BY 1, 2
-	HAVING   COUNT(*) = 1
+    SELECT dept_id, salary
+    FROM emp_salary
+    GROUP BY dept_id, salary
+    HAVING COUNT(*) = 1
 )
-SELECT emp_id, name, salary, dept_id
-FROM   CTE c RIGHT JOIN emp_salary es USING(dept_id, salary)
-WHERE  c.dept_id IS NULL
+SELECT es.emp_id, es.name, es.salary, es.dept_id
+FROM emp_salary es
+LEFT JOIN CTE c ON es.dept_id = c.dept_id AND es.salary = c.salary
+WHERE c.dept_id IS NULL;
 
 
 

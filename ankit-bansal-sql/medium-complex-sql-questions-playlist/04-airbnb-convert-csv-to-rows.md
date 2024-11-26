@@ -36,10 +36,11 @@ INSERT INTO airbnb_searches VALUES
 ```sql
 -- my approach
 
-SELECT   value, COUNT(*) as count
-FROM     airbnb_searches, UNNEST(STRING_TO_ARRAY(filter_room_types, ',')) AS value
-GROUP BY 1
-ORDER BY 2 DESC, 1
+SELECT   value, COUNT(*) AS count
+FROM     airbnb_searches
+CROSS APPLY STRING_SPLIT(filter_room_types, ',') AS value
+GROUP BY value
+ORDER BY count DESC, value;
 
 
 

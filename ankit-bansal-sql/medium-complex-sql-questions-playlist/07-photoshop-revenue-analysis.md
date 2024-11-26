@@ -28,29 +28,31 @@ INSERT INTO adobe_transactions (customer_id, product, revenue) VALUES
 ```sql
 -- Solution 1: using IN
 
-SELECT   customer_id, SUM(revenue) AS revenue
-FROM     adobe_transactions
-WHERE    customer_id IN (
-              SELECT DISTINCT customer_id 
-              FROM   adobe_transactions 
-              WHERE  product = 'Photoshop'
-          )
-         AND product != 'Photoshop' 
-GROUP BY 1
+
+SELECT   at.customer_id, SUM(at.revenue) AS revenue
+FROM     adobe_transactions at
+JOIN     (SELECT customer_id 
+          FROM   adobe_transactions 
+          WHERE  product = 'Photoshop'
+          GROUP BY customer_id) subq
+ON       at.customer_id = subq.customer_id
+WHERE    at.product != 'Photoshop'
+GROUP BY at.customer_id;
 
 
 -- Solution 2: using EXISTS (better practice to use instead of IN)
 
-SELECT   customer_id, SUM(revenue) AS revenue
+
+SELECT   a.customer_id, SUM(a.revenue) AS revenue
 FROM     adobe_transactions a
 WHERE    EXISTS (
               SELECT 1
               FROM   adobe_transactions b
-              WHERE  product = 'Photoshop' and
-                     a.customer_id = b.customer_id
+              WHERE  b.product = 'Photoshop' AND a.customer_id = b.customer_id
           )
-         AND product != 'Photoshop' 
-GROUP BY 1
+         AND a.product != 'Photoshop'  -- Explicitly refer to 'product' from the 'a' alias
+GROUP BY a.customer_id;            -- Explicitly refer to 'customer_id' from the 'a' alias
+
 
 
 
